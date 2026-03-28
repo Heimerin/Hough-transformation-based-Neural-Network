@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm 
+
 
 #warstwy detektora w milimetrach, przykladowe
 LAYER_RAD = np.array([30,60,90,120,150,180,210,240])
@@ -47,12 +50,58 @@ def generate_event(true_tracks = 10, noise_hits = 50, q_pt_range = (-2.0, 2.0)):
 
       hits.append([x_noise, y_noise, random_layer, -1]) #do etykiet id = -1
       #dodatkowe przetasowanie zey potem model nie uczyl sie jakiejs kolejnsoci 
-      np.random.shuffle(hits)
+  hits_arr = np.array(hits)
+  np.random.shuffle(hits_arr)
 
-      return hits, np.array(true_params)
+  return hits_arr, np.array(true_params)
+    
+
+def event_visualize(hits_arr, true_params):
+  fig = plt.figure(figsize=(10,10))
+  ax = fig.add_subplot(111, projection = 'polar')
+  for layer in LAYER_RAD:
+    theta_circ = np.linspace(0, 2 * np.pi, 360)
+    ax.plot(theta_circ, np.full_like(theta_circ, layer), color = 'gray', linestyle = '--', linewidth = 0.5)
+  
+  n_true_tracks = len(true_params)
+  colors = cm.rainbow(np.linspace(0,1, n_true_tracks))
+  for t_id in range(n_true_tracks):
+    q_pt, phi_0 = true_params[t_id]
+    eps=1e-9
+    if abs(q_pt) <eps:
+      q_pt = eps*np.sign(q_pt) if q_pt != 0 else eps
+
+    R = 1.0 / (2.0 * MAGNETIC_CONST * q_pt)
+    max_r = min(2.0 * abs(R), LAYER_RAD[-1])
+    r_points = np.linspace(0.1, max_r, 200)
+
+    ar_arcsin = r_points / (2*R)
+    phi_points = phi_0 + np.arcsin(ar_arcsin)
+    ax.plot(phi_points, r_points, color = colors[t_id], label = f'Track {t_id}')
+  
+  for hit in hits_arr:
+    x_hit, y_hit, j, t_id = hit
+    theta_hit = np.atan2(y_hit, x_hit) 
+    if theta_hit < 0:
+      theta_hit += 2.0 * np.pi
+    r_hit = np.sqrt(x_hit**2 + y_hit**2)
+    if t_id == -1:
+      ax.scatter(theta_hit, r_hit, color = 'black', marker='.', s=10)
+    else:
+      ax.scatter(theta_hit, r_hit, color=colors[int(t_id)], marker='x', s=45)
+    
+  
+  ax.set_theta_zero_location('N')
+  ax.set_theta_direction(-1)
+  ax.set_rmax(LAYER_RAD[-1] + 20)
+  ax.set_yticklabels([])
+  plt.title('MC simulation with noise hits')
+  plt.show()
+
     
 hit_package, particle_params = generate_event(true_tracks = 5, noise_hits=20)
-print(generate_event(true_tracks = 5, noise_hits=20))
+# print(generate_event(true_tracks = 5, noise_hits=20)) 
+event_visualize(hit_package, particle_params)
 
     
 
