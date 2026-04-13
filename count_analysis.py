@@ -70,7 +70,7 @@ def build_unet(input_shape=(Q_PT_BINS, PHI_BINS, 1)):
     #zwraca pradwopodobienstwo bycia peakem
     outputs=layers.Conv2D(1, (1,1), activation='sigmoid')(c5)
     model=models.Model(inputs=[inputs], outputs=[outputs])
-    model.compile(optimizer='adam', loss='mse', metrics=['mae '])
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
     return model
 
 #blok testowy 
