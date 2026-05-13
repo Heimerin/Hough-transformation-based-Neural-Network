@@ -1,8 +1,10 @@
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.callbacks import ModelCheckpoint
 import glob
 import random
 import os 
+from count_analysis import build_unet
 
 def extract_patch(accumulator_frame, full_peaks_list, start_y, window_size=216):
     image_patch = accumulator_frame[start_y : start_y + window_size, :]
@@ -50,7 +52,7 @@ def data_generator(data_dir, patches_per_file=64, patch_size=216):
             frame_peaks = true_peaks[frame_idx]
 
             patch_X, local_peaks = extract_patch(frame_accumulator, frame_peaks, start_y, patch_size)
-            patch_Y = generate_patch_heatmap(patch_X.shape, local_peaks, sigma=2.0)
+            patch_Y = generate_patch_heatmap(patch_X.shape, local_peaks, sigma=3.0)
 
             #dostosowanie wymiaru pod U net
             final_X = np.expand_dims(patch_X, axis=-1)
@@ -60,10 +62,12 @@ def data_generator(data_dir, patches_per_file=64, patch_size=216):
 #test
 if __name__ == "__main__":
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DATA_DIRECTORY = os.path.join(BASE_DIR, "data1")
+    DATA_DIRECTORY = os.path.join(BASE_DIR, "data1")    #nazwa folderu z danymi
 
     BATCH_SIZE = 8
     PATCH_SIZE = 216
+    STEPS_PER_EPOCH = 250
+    EPOCHS = 10
 
     output_sig = (tf.TensorSpec(shape=(PATCH_SIZE, PATCH_SIZE, 1), dtype=tf.float32),tf.TensorSpec(shape=((PATCH_SIZE, PATCH_SIZE, 1)), dtype=tf.float32))
     
@@ -72,7 +76,18 @@ if __name__ == "__main__":
         output_signature=output_sig
     ).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
-    for X_batch, Y_batch in dataset.take(1):
-        print(f"Batch X shape: {X_batch.shape}, Batch Y shape: {Y_batch.shape}")
-        print(f"Min/Max w X: {np.min(X_batch)} / {np.max(X_batch)}")
-        print(f"Min/Max w Y: {np.min(Y_batch)} / {np.max(Y_batch)}")
+    model = build_unet(input_shape=(PATCH_SIZE, PATCH_SIZE, 1))
+
+    checkpoint = ModelCheckpoint(
+        filepath='unet_cern_real_data.keras', 
+        monitor='loss',               
+        save_best_only=True,          
+        verbose=1                     
+    )
+
+    history = model.fit(
+        dataset,
+        epochs=EPOCHS,
+        steps_per_epoch=STEPS_PER_EPOCH,
+        callbacks=[checkpoint]
+    )

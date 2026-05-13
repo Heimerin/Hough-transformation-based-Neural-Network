@@ -43,7 +43,7 @@ def gen_truth_heatmap(true_params, shape=(Q_PT_BINS, PHI_BINS), sigma=2.0):
 
 
 #architektura sieci
-def build_unet(input_shape=(Q_PT_BINS, PHI_BINS, 1)):
+def build_unet(input_shape=(216, 216, 1)):
     inputs=layers.Input(shape=input_shape)
     #enkoder 
     c1 = layers.Conv2D(16, (3,3), activation = 'relu', padding='same')(inputs)
@@ -70,7 +70,7 @@ def build_unet(input_shape=(Q_PT_BINS, PHI_BINS, 1)):
     #zwraca pradwopodobienstwo bycia peakem
     outputs=layers.Conv2D(1, (1,1), activation='sigmoid')(c5)
     model=models.Model(inputs=[inputs], outputs=[outputs])
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['mae'])
     return model
 
 #blok testowy 
